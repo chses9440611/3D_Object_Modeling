@@ -1,0 +1,10 @@
+<launch>
+    <arg name="param_file_name" default="camera_pose" doc="Specify a param file. ex:megaman." /> 
+    <arg name="pkg_name" value="pcl"/>
+    <arg name="node_name" default="getTwoData_michael"/>    
+
+    <node name="$(arg pkg_name)" pkg="$(arg pkg_name)" type="$(arg node_name)" output="screen" clear_params="true" required="true">
+    	<rosparam command="load" file="$(find pcl)/config/$(arg param_file_name).yaml"/>
+    </node>
+
+</launch>

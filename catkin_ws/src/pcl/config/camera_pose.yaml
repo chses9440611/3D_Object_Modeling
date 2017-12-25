@@ -1,0 +1,6 @@
+# pose for camera /abc and camera /def
+# unit {m, m, m , degree, degree, degree}
+
+camera_abc: {x: 0.0, y: 0.20, z: 0.16, beta: 0.0, garma: -90.0, alpha: 0.0}
+camera_def: {x: 0.0, y: 0.20, z: 0.16, beta: 0.0, garma: 90.0, alpha: 0.0}
+value_threshold: 10

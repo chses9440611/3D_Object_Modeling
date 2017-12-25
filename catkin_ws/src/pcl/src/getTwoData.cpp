@@ -6,39 +6,47 @@
 #include<pcl/point_cloud.h>
 #include<pcl/point_types.h>
 #include "pcl_ros/point_cloud.h"
-
+#include <cmath>
+#include <map>
+#include <string>
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudRGB;
 ros::Publisher point_cloud_combine;
 ros::Publisher pointRGB_A;
 ros::Publisher pointRGB_B;
 PointCloudRGB::Ptr cloud_A(new PointCloudRGB);
 PointCloudRGB::Ptr cloud_B(new PointCloudRGB);
-
+std::map<std::string, float>pose_A, pose_B;
 void combineTwoPCL(PointCloudRGB::Ptr&, PointCloudRGB::Ptr&);
-void cloud_cb_A(const sensor_msgs::PointCloud2ConstPtr& input){
+void pcl_transform(PointCloudRGB::Ptr&, std::map<std::string, float>&);
+
+void cloud_cb_A(const sensor_msgs::PointCloud2ConstPtr& input);
+	
 	pcl::fromROSMsg(*input, *cloud_A);// convert from PCL2 to pcl point type
+	
 	printf("cloud A size: %d\n", cloud_A->points.size());
+	
 	for(int i=0; i<cloud_A->points.size(); i++){
 		cloud_A->points[i].r = 255;
 		cloud_A->points[i].g = 255;
 		cloud_A->points[i].b = 255;
 	}
-	//pointRGB_A.publish(*cloud_A);	
+	pcl_transform(cloud_A, pose_A);
 }
 
 void cloud_cb_B(const sensor_msgs::PointCloud2ConstPtr& input){
 	pcl::fromROSMsg(*input, *cloud_B);
+	
 	printf("cloud B size: %d\n", cloud_B->points.size());
-	combineTwoPCL(cloud_A, cloud_B);
+	
 	for(int i=0; i<cloud_B->points.size(); i++){
 		cloud_B->points[i].r = 150;
 		cloud_B->points[i].g = 0;
 		cloud_B->points[i].b = 150;
-		cloud_B->points[i].x += 2.5;
-		cloud_B->points[i].y += 0.8;
-		cloud_B->points[i].z += 2.0;
 	}
-	//pointRGB_B.publish(*cloud_B);
+
+	pcl_transform(cloud_B, pose_B);
+	
+	combineTwoPCL(cloud_A, cloud_B);
 }
 
 void combineTwoPCL(PointCloudRGB::Ptr& first_cloud, PointCloudRGB::Ptr& second_cloud){
@@ -71,7 +79,11 @@ void combineTwoPCL(PointCloudRGB::Ptr& first_cloud, PointCloudRGB::Ptr& second_c
 int main(int argc, char** argv){
 	ros::init(argc, argv, "combine_pcl");
 	ros::NodeHandle nh;
-	point_cloud_combine = nh.advertise<sensor_msgs::PointCloud2>("combine_point_cloud", 1);
+
+	nh.getParam("camera_abc", pose_A);
+	nh.getParam("camera_def", pose_B);
+
+	point_cloud_combine = nh.advertise<sensor_msgs::PointCloud2>("/combine_point_cloud", 1);
 	pointRGB_A = nh.advertise<PointCloudRGB>("A_RGB", 1);
 	pointRGB_B = nh.advertise<PointCloudRGB>("B_RGB", 1);
 	ros::Subscriber point_A = nh.subscribe<sensor_msgs::PointCloud2>("/abc/depth/points", 1, cloud_cb_A);
@@ -79,5 +91,26 @@ int main(int argc, char** argv){
 	//combineTwoPCL(cloud_A, cloud_B);
 	//point_cloud_combine = nh.advertise<PointCloudRGB>("/combine/points", 1);
 	ros::spin();
+}
+
+void pcl_transform(PointCloudRGB::Ptr& input, std::map<std::string, float>  &pose){
+	float qx = pose["x"];
+	float qy = pose["y"];
+	float qz = pose["z"];
+	//float beta = pose[3] * 180.0 / M_PI;
+	float garma = pose["garma"] * 180.0 / M_PI;
+	float COS = cos(garma);
+	float SIN = sin(garma);
+	float t_x, t_y, t_z;
+	//float alpha = pose[5] * 180.0 / M_PI;
+	for(int i=0; i<input->points.size() i++){
+		t_x = COS * input->points[i].x + SIN * input->points[i].z + qx;
+		t_y = y + qy;
+		t_x = -1 * SIN * input->points[i].x + COS * input->points[i].z + qz;
+		input->points[i].x = t_x;
+		input->points[i].y = t_y;
+		input->points[i].z = t_z;
+	}
+
 }
 
